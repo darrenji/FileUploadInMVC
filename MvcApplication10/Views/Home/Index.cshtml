@@ -1,0 +1,118 @@
+﻿@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style type="text/css">
+    #msg {
+        color: red;
+    }
+
+</style>
+
+<form id="file_upload_form" method="post" enctype="multipart/form-data" action="">
+    <input name="file" id="file" size="27" type="file" />
+    <img src="~/images/ajax-loader.gif" id="indicator" style="display: none;" />
+    <br />
+    <div id="imgArea">
+        <table id="tbl">
+            <tbody>         
+            </tbody>
+        </table>
+    </div>
+    <div>
+        <span id="msg"></span>
+    </div>
+</form>
+
+
+@section scripts
+{
+    <script src="~/Scripts/checkFileTypeAndSize.js"></script>
+    <script type="text/javascript">
+        $(function() {
+            $("#file").checkFileTypeAndSize({
+                allowedExtensions: ['jpg','jpeg','gif','png'],
+                maxSize: 1024, //最大允许1024KB，即1MB
+                success: function () {
+                    //显示进度提示
+                    $('#indicator').css("display", "block");
+
+                    //清空提示内容
+                    $('#msg').text('');
+
+                    if ($('#fn').text().length > 0) {
+                        //删除图片
+                        deleteImg();
+                    }
+                    
+                    //上传文件数据准备
+                    var fd = new FormData();
+                    fd.append('image', $('#file')[0].files[0]);
+
+                    $.ajax({
+                        url: '@Url.Action("UploadFile","Home")',
+                        type: "POST",
+                        data: fd,
+                        contentType: false,
+                        cache: false,
+                        processData: false,
+                        dataType: 'json',
+                        success: function (data) {
+
+                            //隐藏进度提示
+                            $('#indicator').css("display", "none");
+
+
+                            if (data.isvalid) {
+                                //$('#fileTemplate').tmpl(data).appendTo('#imgArea');
+                                createTableTr();
+                                $('#thumb').attr('src', data.filepath);
+                                $('#fn').text(data.filename);
+                                
+                            } else {
+                                $('#msg').text(data.message);
+                             }
+                        }
+                     });
+                    
+                },
+                extensionerror: function () {
+                    //alert('允许的格式为：jpg,jpeg,gif,png');
+                    $('#msg').text('允许的格式为：jpg,jpeg,gif,png');
+                    return;
+                },
+                sizeerror: function () {
+                    //alert('最大尺寸1024KB,即1MB');
+                    $('#msg').text('最大尺寸1024KB,即1MB');
+                    return;
+                }
+            });
+        });
+
+        //删除图片
+        function deleteImg() {
+            $.ajax({
+                cache: false,
+                url: '@Url.Action("DeleteFileByName", "Home")',
+                type: "POST",
+                data: { smallname: $('#fn').text() },
+                success: function (data) {
+                    if (data.msg) {
+                        $('#fn').parent().parent().remove();
+                    }
+                },
+                error: function (jqXhr, textStatus, errorThrown) {
+                    alert("出错了 '" + jqXhr.status + "' (状态: '" + textStatus + "', 错误为: '" + errorThrown + "')");
+                }
+            });
+        }
+
+        //创建表格
+        function createTableTr() {
+            var table = $('#tbl');
+            table.append("<tr><td><img id='thumb' /></td><td colspan='2'><span id='fn'></span></td></tr>");
+        }
+    </script>
+
+}
